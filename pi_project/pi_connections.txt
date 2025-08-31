@@ -1,0 +1,17 @@
+Raspberry Pi GPIO Pinout (BCM numbering):
+
++---------------------+
+| 3.3V  (Pin 1)       |
+| 5V    (Pin 2)       |
+| GND   (Pin 6)       |
+| GPIO17 (Pin 11)     | <-- Relay IN
++---------------------+
+
+Relay Module Pins:
+- VCC -> Raspberry Pi 5V (Pin 2)
+- GND -> Raspberry Pi GND (Pin 6)
+- IN  -> Raspberry Pi GPIO17 (Pin 11)
+
+Water Pump:
+- Connect pump power terminals to relay's Normally Open (NO) and Common (COM) contacts.
+- Pump power supply connected accordingly (do NOT power pump directly from Pi).

@@ -1,0 +1,11 @@
+# Raspberry Pi Slave Controller Requirements
+# Minimal dependencies for GPIO control and Flask API
+
+# Core Flask dependencies
+Flask==2.3.3
+
+# GPIO Control (Raspberry Pi specific)
+RPi.GPIO==0.7.1
+
+# Utilities
+python-dotenv==1.0.0 

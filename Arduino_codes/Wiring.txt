@@ -1,0 +1,34 @@
+
+DHT11/DHT22:
+  - VCC -> 5V
+  - GND -> GND
+  - DATA -> D2 (add 10k pull-up to 5V if your module doesn’t include one)
+
+Soil Moisture Sensor (analog output type/module):
+  - VCC -> 5V
+  - GND -> GND
+  - AOUT -> A0
+
+MQ Gas Sensor (e.g., MQ-2/MQ-135 analog board):
+  - VCC -> 5V (allow warm-up time)
+  - GND -> GND
+  - AOUT -> A1
+
+Relay Module (5V, 1-channel, to drive pump):
+  - VCC -> 5V
+  - GND -> GND
+  - IN  -> D8
+  (Many modules are ACTIVE LOW; code handles this.)
+
+9V DC Pump with external 9V supply (battery or adapter):
+  - 9V(+)  -> Relay COM
+  - Relay NO -> Pump (+)
+  - Pump (-) -> 9V (-)
+  - (Optional) Diode (e.g., 1N4007) across pump terminals (reverse-biased) to reduce spikes
+
+IMPORTANT POWER/GROUNDING:
+  - The pump’s 9V supply is separate from Arduino 5V.
+  - Relay switches the 9V line; it does NOT power the pump from Arduino.
+  - Servo needs its own 5–6V supply if it draws more than Arduino can provide.
+  - COMMON GROUND: Connect Arduino GND, Relay GND, Servo GND, and sensor GND together.
+  - Do NOT power the servo from Arduino 5V if it browns out; use external 5V.

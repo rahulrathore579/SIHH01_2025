@@ -1,0 +1,172 @@
+/* 
+  Smart Irrigation + Environment Monitor (JSON + Command Control)
+  Modified: Fix DHT readings (null issue) with retries + warm-up
+*/
+
+#include <Servo.h>
+#include <DHT.h>
+
+// ---------------- CONFIG ----------------
+#define DHTPIN 2
+#define DHTTYPE DHT22        // ⚠️ Change to DHT11 if you use DHT11
+
+const int PIN_SOIL  = A0;    // Soil moisture analog
+const int PIN_MQ    = A1;    // MQ gas sensor analog
+const int PIN_RELAY = 8;     // Relay input pin (module IN)
+const int PIN_SERVO = 9;     // Servo signal (PWM)
+
+const bool RELAY_ACTIVE_LOW = true;
+
+// Moisture calibration (adjust after testing)
+int MOISTURE_WET_RAW  = 350; 
+int MOISTURE_DRY_RAW  = 850; 
+
+int START_PUMP_BELOW_PCT = 30; 
+int STOP_PUMP_ABOVE_PCT  = 45; 
+
+int SERVO_OPEN_ANGLE   = 90;
+int SERVO_CLOSED_ANGLE = 0;
+
+unsigned long SAMPLE_INTERVAL_MS   = 1000;
+unsigned long PUMP_MIN_ON_TIME_MS  = 10000;   
+unsigned long PUMP_MAX_ON_TIME_MS  = 120000;  
+
+DHT dht(DHTPIN, DHTTYPE);
+Servo valve;
+
+bool pumpOn = false;
+bool autoMode = true;
+unsigned long lastSample = 0;
+unsigned long pumpChangedAt = 0;
+
+// ---------------- HELPERS ----------------
+int clampInt(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+int readAnalogAveraged(uint8_t pin, uint8_t samples = 12) {
+  long sum = 0;
+  for (uint8_t i = 0; i < samples; i++) {
+    sum += analogRead(pin);
+    delay(2);
+  }
+  return (int)(sum / samples);
+}
+
+int rawToMoisturePercent(int raw) {
+  long pct = map(raw, MOISTURE_WET_RAW, MOISTURE_DRY_RAW, 100, 0);
+  return clampInt((int)pct, 0, 100);
+}
+
+void setRelay(bool on) {
+  if (on == pumpOn) return;
+  pumpOn = on;
+  pumpChangedAt = millis();
+  if (RELAY_ACTIVE_LOW) {
+    digitalWrite(PIN_RELAY, on ? LOW : HIGH);
+  } else {
+    digitalWrite(PIN_RELAY, on ? HIGH : LOW);
+  }
+  valve.write(on ? SERVO_OPEN_ANGLE : SERVO_CLOSED_ANGLE);
+}
+
+// ---------------- COMMAND HANDLER ----------------
+void handleSerialCommands() {
+  while (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    String up = cmd; up.toUpperCase();
+
+    if (up == "ON") {
+      autoMode = false; setRelay(true);
+      Serial.println(F("{\"ack\":\"ON\"}"));
+    } else if (up == "OFF") {
+      autoMode = false; setRelay(false);
+      Serial.println(F("{\"ack\":\"OFF\"}"));
+    } else if (up == "AUTO") {
+      autoMode = true;
+      Serial.println(F("{\"ack\":\"AUTO\"}"));
+    } else if (up.startsWith("SET START ")) {
+      int v = up.substring(10).toInt();
+      v = clampInt(v, 0, 100);
+      START_PUMP_BELOW_PCT = v;
+      Serial.print(F("{\"ack\":\"SET START\",\"value\":")); Serial.print(v); Serial.println("}");
+    } else if (up.startsWith("SET STOP ")) {
+      int v = up.substring(9).toInt();
+      v = clampInt(v, 0, 100);
+      STOP_PUMP_ABOVE_PCT = v;
+      Serial.print(F("{\"ack\":\"SET STOP\",\"value\":")); Serial.print(v); Serial.println("}");
+    } else if (up == "PING") {
+      Serial.println(F("{\"ack\":\"PONG\"}"));
+    } else {
+      Serial.print(F("{\"ack\":\"UNKNOWN\",\"cmd\":\"")); Serial.print(cmd); Serial.println(F("\"}"));
+    }
+  }
+}
+
+// ---------------- SETUP ----------------
+void setup() {
+  Serial.begin(9600);
+  pinMode(PIN_RELAY, OUTPUT);
+  if (RELAY_ACTIVE_LOW) digitalWrite(PIN_RELAY, HIGH); else digitalWrite(PIN_RELAY, LOW);
+
+  dht.begin();
+  delay(2000); // Warm-up delay for DHT
+
+  valve.attach(PIN_SERVO);
+  valve.write(SERVO_CLOSED_ANGLE);
+
+  Serial.println(F("{\"status\":\"starting\",\"note\":\"Calibrate MOISTURE_WET_RAW / MOISTURE_DRY_RAW\"}"));
+}
+
+// ---------------- LOOP ----------------
+void loop() {
+  handleSerialCommands();
+
+  unsigned long now = millis();
+  if (now - lastSample >= SAMPLE_INTERVAL_MS) {
+    lastSample = now;
+
+    int soilRaw = readAnalogAveraged(PIN_SOIL, 12);
+    int soilPct = rawToMoisturePercent(soilRaw);
+    int mqRaw   = readAnalogAveraged(PIN_MQ, 12);
+
+    // Retry DHT read up to 3 times if fail
+    float t = NAN, h = NAN;
+    for (int i = 0; i < 3; i++) {
+      t = dht.readTemperature();
+      h = dht.readHumidity();
+      if (!isnan(t) && !isnan(h)) break;
+      delay(100);
+    }
+    bool dhtOK = !(isnan(t) || isnan(h));
+    if (!dhtOK) {
+      Serial.println(F("{\"warn\":\"DHT read failed\"}"));
+    }
+
+    // --- Pump Control ---
+    bool wantPumpOn = pumpOn;
+    if (autoMode) {
+      if (!pumpOn && soilPct <= START_PUMP_BELOW_PCT) {
+        wantPumpOn = true;
+      } else if (pumpOn && soilPct >= STOP_PUMP_ABOVE_PCT) {
+        if (now - pumpChangedAt >= PUMP_MIN_ON_TIME_MS) {
+          wantPumpOn = false;
+        }
+      }
+    }
+    if (pumpOn && (now - pumpChangedAt >= PUMP_MAX_ON_TIME_MS)) {
+      wantPumpOn = false;
+    }
+    if (wantPumpOn != pumpOn) setRelay(wantPumpOn);
+
+    // --- JSON Output ---
+    Serial.print(F("{\"soil_raw\":"));   Serial.print(soilRaw);
+    Serial.print(F(",\"soil_pct\":"));   Serial.print(soilPct);
+    Serial.print(F(",\"mq_raw\":"));     Serial.print(mqRaw);
+    Serial.print(F(",\"pump\":"));       Serial.print(pumpOn ? 1 : 0);
+    Serial.print(F(",\"mode\":\""));     Serial.print(autoMode ? F("AUTO") : F("MAN")); Serial.print("\"");
+    Serial.print(F(",\"temp_c\":"));     if (dhtOK) Serial.print(t, 1); else Serial.print(F("null"));
+    Serial.print(F(",\"humid\":"));      if (dhtOK) Serial.print(h, 1); else Serial.print(F("null"));
+    Serial.print(F(",\"ts\":"));         Serial.print(now);
+    Serial.println("}");
+  }
+}

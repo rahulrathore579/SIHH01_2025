@@ -1,0 +1,579 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Smart Irrigation </title>
+  <style>
+    /* Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+    /* Variables */
+    :root {
+      --primary-color: #4CAF50; /* Green for growth */
+      --secondary-color: #388E3C; /* Darker green */
+      --tertiary-color: #26A69A; /* Cyan */
+      --background-color: #F0F4F8; /* Light gray-blue */
+      --card-bg-color: #FFFFFF;
+      --text-color: #2C3E50; /* Dark blue-gray */
+      --subtle-text: #7F8C8D;
+      --border-color: #E0E0E0;
+      --shadow-color: rgba(0, 0, 0, 0.05);
+      --accent-color: #FFC107; /* Amber for highlights */
+      --success-color: #27AE60;
+      --danger-color: #E74C3C;
+    }
+
+    /* Base Styles */
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3 {
+      font-weight: 600;
+      color: var(--secondary-color);
+      margin: 0;
+    }
+
+    h1 {
+      font-family: 'Pacifico', cursive;
+      font-size: 2.8rem;
+      color: var(--primary-color);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    p {
+      color: var(--subtle-text);
+      font-size: 0.95rem;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 24px;
+      flex-grow: 1;
+    }
+
+    /* Navbar */
+    .navbar {
+      background-color: var(--card-bg-color);
+      box-shadow: 0 4px 15px var(--shadow-color);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .navbar-brand img {
+      height: 45px;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .navbar-menu {
+      display: flex;
+      gap: 25px;
+    }
+
+    .navbar-menu a {
+      text-decoration: none;
+      color: var(--text-color);
+      font-weight: 500;
+      padding: 10px 15px;
+      border-radius: 50px;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .navbar-menu a:hover, .navbar-menu a.active {
+      color: var(--primary-color);
+      background-color: var(--background-color);
+    }
+
+    /* Status Indicator */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 8px 15px;
+      border-radius: 50px;
+      box-shadow: 0 2px 8px var(--shadow-color);
+    }
+
+    .status-indicator .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transition: background-color 0.3s ease;
+    }
+
+    .status-indicator.online .dot {
+      background-color: var(--success-color);
+    }
+
+    .status-indicator.offline .dot {
+      background-color: var(--danger-color);
+    }
+
+    /* Sections */
+    section {
+      padding: 60px 0;
+      text-align: center;
+    }
+
+    .section-title {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      color: var(--secondary-color);
+    }
+
+    .section-subtitle {
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+
+    /* Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+
+    .card {
+      background-color: var(--card-bg-color);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+    
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: var(--primary-color);
+      transition: all 0.3s ease;
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+
+    .card:hover {
+      transform: translateY(-10px) scale(1.02);
+      box-shadow: 0 15px 45px rgba(0,0,0,0.1);
+    }
+    
+    .card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      color: var(--tertiary-color);
+      margin-bottom: 15px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    .card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+    }
+    
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .card-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .card-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #pump.ON .card-value { color: var(--success-color); }
+    #pump.OFF .card-value { color: var(--danger-color); }
+
+    /* Controls Card */
+    .control-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+
+    .control-buttons button {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .control-buttons button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+
+    .btn-on { background-color: var(--success-color); color: white; }
+    .btn-off { background-color: var(--danger-color); color: white; }
+    .btn-auto { background-color: var(--tertiary-color); color: white; }
+
+    .threshold-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .threshold-inputs input {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px 15px;
+      border-radius: 12px;
+      border: 2px solid var(--border-color);
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .threshold-inputs input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15);
+    }
+
+    .btn-update {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 12px 25px;
+      border-radius: 50px;
+      width: 100%;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-update:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+
+    /* Prediction Card */
+    #prediction-card {
+      text-align: center;
+      background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+      color: white;
+    }
+    
+    #prediction-card h3 {
+      color: white;
+    }
+
+    #prediction-text {
+      font-size: 1.1rem;
+      font-weight: 500;
+      line-height: 1.8;
+      margin-top: 15px;
+      padding: 20px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      transition: all 0.5s ease;
+    }
+
+    .pulse {
+      animation: pulse 1s infinite ease-in-out;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--subtle-text);
+      font-size: 0.85rem;
+      background-color: var(--card-bg-color);
+      margin-top: 40px;
+      box-shadow: 0 -2px 10px var(--shadow-color);
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .navbar {
+        flex-direction: column;
+        align-items: center;
+      }
+      .navbar-menu {
+        margin-top: 15px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .section-title {
+        font-size: 1.8rem;
+      }
+      .container {
+        padding: 20px 15px;
+      }
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
+  <script>
+    async function fetchJSON(url, opts={}) {
+      const res = await fetch(url, opts);
+      return res.ok ? res.json().catch(()=> ({})) : {};
+    }
+
+    async function refresh() {
+      const d = await fetchJSON("/data");
+      const byId = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.innerHTML = (val ?? "--");
+          if (id === "pump") {
+            el.className = val === "ON" ? "ON" : "OFF";
+          }
+        }
+      };
+      
+      byId("soil_raw", d.soil_raw);
+      byId("soil_pct", d.soil_pct ? `${d.soil_pct}%` : "--");
+      byId("mq_raw", d.mq_raw);
+      byId("pump", d.pump ? "ON" : "OFF");
+      byId("mode", d.mode);
+      byId("temp", d.temp_c ? `${d.temp_c.toFixed(1)}°C` : "—");
+      byId("humid", d.humid ? `${d.humid.toFixed(1)}%` : "—");
+      
+      const ageEl = document.getElementById("age");
+      const statusEl = document.getElementById("status-text");
+      const statusDot = document.getElementById("status-dot");
+      if (d.age_sec !== undefined) {
+        statusEl.textContent = "Online";
+        statusDot.className = "dot";
+        ageEl.textContent = `(${d.age_sec.toFixed(1)}s ago)`;
+      } else {
+        statusEl.textContent = "Offline";
+        statusDot.className = "dot";
+        ageEl.textContent = "";
+      }
+
+      // Prediction logic
+      const soilPct = d.soil_pct;
+      const tempC = d.temp_c;
+      const humid = d.humid;
+      const predictionText = document.getElementById("prediction-text");
+      
+      if (soilPct !== undefined && tempC !== undefined && humid !== undefined) {
+        let prediction = "";
+        if (soilPct < 30 && tempC > 25) {
+          prediction = "<strong>Warning:</strong> Soil is critically dry. High temperatures will cause rapid dehydration. Consider immediate irrigation.";
+        } else if (soilPct < 50 && tempC > 20) {
+          prediction = "<strong>Attention:</strong> Soil moisture is low. The weather is dry, so the system is ready to water soon.";
+        } else if (d.pump && d.mode === 'AUTO') {
+          prediction = "<strong>Active:</strong> The automatic system is currently irrigating to maintain optimal soil moisture.";
+        } else {
+          prediction = "<strong>Status OK:</strong> Current conditions are stable. No immediate action is required for irrigation.";
+        }
+        predictionText.innerHTML = prediction;
+      } else {
+        predictionText.textContent = "No data available for prediction. Please check sensor connection.";
+      }
+    }
+
+    async function act(path, body=null) {
+      await fetch(path, { method: "POST", headers: body?{"Content-Type":"application/json"}:{}, body: body?JSON.stringify(body):null });
+      setTimeout(refresh, 300);
+    }
+
+    function setThresholds() {
+      const start = parseInt(document.getElementById("start").value);
+      const stop  = parseInt(document.getElementById("stop").value);
+      const payload = {};
+      if (!isNaN(start)) payload.start = start;
+      if (!isNaN(stop))  payload.stop = stop;
+      act("/set", payload);
+    }
+    
+    setInterval(refresh, 1000);
+    window.onload = refresh;
+  </script>
+</head>
+<body>
+
+  <div class="navbar">
+    <div class="navbar-brand">
+      <img src="https://i.imgur.com/your-irrigation-logo.png" alt="">
+      <h1>Smart Irrigation</h1>
+    </div>
+    <div class="navbar-menu">
+      <a href="#monitor" class="active">Monitor</a>
+      <a href="#predict">Prediction</a>
+      <a href="#control">Control</a>
+    </div>
+    <div class="status-indicator" id="status-indicator">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">Connecting...</span>
+      <span id="age"></span>
+    </div>
+  </div>
+
+  <div class="container">
+    <section id="monitor">
+      <h2 class="section-title">Live Sensor Dashboard</h2>
+      <p class="section-subtitle">A comprehensive overview of your farm's real-time environmental data.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <span class="card-icon">🌱</span>
+          <h3>Soil Moisture</h3>
+          <p>Key to plant health and growth.</p>
+          <div class="card-row">
+            <span>Raw Reading:</span>
+            <span class="card-value" id="soil_raw">--</span>
+          </div>
+          <div class="card-row">
+            <span>Moisture Percentage:</span>
+            <span class="card-value" id="soil_pct">--</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <span class="card-icon">☀️</span>
+          <h3>Ambient Conditions</h3>
+          <p>Affects evaporation and plant respiration.</p>
+          <div class="card-row">
+            <span>Temperature:</span>
+            <span class="card-value" id="temp">--</span>
+          </div>
+          <div class="card-row">
+            <span>Humidity:</span>
+            <span class="card-value" id="humid">--</span>
+          </div>
+        </div>
+        
+        <div class="card">
+          <span class="card-icon">💨</span>
+          <h3>Air Quality</h3>
+          <p>Monitors air purity around your crops.</p>
+          <div class="card-row">
+            <span>Raw Gas Reading:</span>
+            <span class="card-value" id="mq_raw">--</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="predict">
+      <h2 class="section-title">Intelligent Prediction & Insights</h2>
+      <p class="section-subtitle">Our smart system analyzes the data to provide proactive recommendations.</p>
+      <a href="#">
+        <div class="cards-grid">
+        <div class="card" id="prediction-card">
+          <span class="card-icon" style="color:white; animation: none;">🧠</span>
+          <h3>Intelligent Pesticide Sprinkling System</h3>
+          <p>Based on current conditions:</p>
+          <div id="prediction-text">No data available for prediction.</div>
+        </div>
+      </div>
+      </a>
+    </section>
+
+    <section id="control">
+      <h2 class="section-title">System Controls</h2>
+      <p class="section-subtitle">Take manual control of the pump or configure automated settings.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <span class="card-icon">⚙️</span>
+          <h3>Pump & Mode</h3>
+          <p>Manage the pump's operation.</p>
+          <div class="card-row">
+            <span>Pump Status:</span>
+            <span class="card-value" id="pump">--</span>
+          </div>
+          <div class="card-row">
+            <span>Current Mode:</span>
+            <span class="card-value" id="mode">--</span>
+          </div>
+          <div class="control-buttons">
+            <button class="btn-on" onclick="act('/relay/on')">🚀 Pump ON</button>
+            <button class="btn-off" onclick="act('/relay/off')">🛑 Pump OFF</button>
+            <button class="btn-auto" onclick="act('/mode/auto')">🤖 AUTO Mode</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <span class="card-icon">📊</span>
+          <h3>Automation Thresholds</h3>
+          <p>Set soil moisture levels for auto-watering.</p>
+          <div class="threshold-inputs">
+            <input id="start" type="number" placeholder="Start %" min="0" max="100">
+            <input id="stop" type="number" placeholder="Stop %" min="0" max="100">
+          </div>
+          <button class="btn-update" onclick="setThresholds()">💾 Update Thresholds</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer">
+    <p>&copy; 2024 Smart Irrigation Pro. All Rights Reserved.</p>
+  </div>
+
+</body>
+</html>
