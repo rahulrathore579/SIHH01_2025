@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="controls">
+	<button id="captureBtn">Capture, Detect & Control Pi</button>
+	<button id="startCameraBtn">Start Camera</button>
+	<button id="stopCameraBtn">Stop Camera</button>
+	<button id="testPiBtn">Test Pi Connection</button>
+	<span id="status"></span>
+</section>
+
+<section class="camera-section">
+	<div class="camera-container">
+		<div class="camera-placeholder">
+			<h3>📷 Camera Status</h3>
+			<p id="cameraStatus">Camera not started</p>
+			<p id="piStatus">Pi connection: Unknown</p>
+		</div>
+	</div>
+	<div class="detection-info">
+		<h3>🌱 Plant Disease Detection</h3>
+		<div class="decision-logic">
+			<h4>Decision Logic:</h4>
+			<p>• 0-30% severity: Healthy → No spray</p>
+			<p>• 30-70% severity: Low disease → Short spray (2s)</p>
+			<p>• 70-100% severity: High disease → Long spray (5s)</p>
+		</div>
+		<p id="detectionStatus">Ready to capture and detect</p>
+		<div id="lastResult"></div>
+	</div>
+</section>
+
+<section class="status-cards">
+	<div class="card">
+		<h3>Thresholds</h3>
+		<p>Low: <strong>{{ low }}%</strong></p>
+		<p>High: <strong>{{ high }}%</strong></p>
+	</div>
+	<div class="card">
+		<h3>Pi Connection</h3>
+		<p id="piConnectionStatus">Checking...</p>
+	</div>
+</section>
+
+<section class="grid">
+	<div class="panel">
+		<h2>Recent Detections</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Disease</th>
+					<th>Severity</th>
+					<th>Action</th>
+					<th>Pi Response</th>
+					<th>When</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for d in detections %}
+				<tr>
+					<td>{{ d.id }}</td>
+					<td>{{ d.disease }}</td>
+					<td>{{ '%.1f'|format(d.severity or 0) }}%</td>
+					<td>
+						<span class="action-badge {{ d.action }}">
+							{{ d.action.upper() }}
+						</span>
+					</td>
+					<td>{{ d.pi_response.get('status', 'unknown') }}</td>
+					<td>{{ d.timestamp }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="panel">
+		<h2>Recent Actions</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Action</th>
+					<th>Duration (ms)</th>
+					<th>Severity</th>
+					<th>Pi Status</th>
+					<th>When</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for a in actions %}
+				<tr>
+					<td>{{ a.id }}</td>
+					<td>
+						<span class="action-badge {{ a.action }}">
+							{{ a.action.upper() }}
+						</span>
+					</td>
+					<td>{{ a.duration_ms }}</td>
+					<td>{{ '%.1f'|format(a.severity or 0) }}%</td>
+					<td>{{ a.pi_status }}</td>
+					<td>{{ a.timestamp }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</section>
+{% endblock %} 

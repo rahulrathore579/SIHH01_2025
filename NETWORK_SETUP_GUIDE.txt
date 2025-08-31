@@ -1,0 +1,244 @@
+================================================================================
+                    NETWORK SETUP GUIDE - PC & PI CONNECTION
+================================================================================
+
+🌐 NETWORK CONFIGURATION FOR PLANT DISEASE DETECTION SYSTEM
+==========================================================
+
+📋 PREREQUISITES
+===============
+1. Both PC and Raspberry Pi must be on the same network
+2. Both devices must have internet access
+3. Firewall settings must allow communication on ports 5000 and 5001
+4. Static IP addresses are recommended for stable connection
+
+🔧 STEP 1: FIND YOUR DEVICE IP ADDRESSES
+========================================
+
+PC (Windows):
+--------------
+1. Open Command Prompt or PowerShell
+2. Run: ipconfig
+3. Look for "IPv4 Address" under your active network adapter
+4. Note your PC's IP address (e.g., 192.168.1.50)
+
+Raspberry Pi:
+--------------
+1. Open terminal on Pi
+2. Run: hostname -I
+3. Note your Pi's IP address (e.g., 192.168.1.100)
+4. Alternative: Run: ifconfig or ip addr show
+
+🔧 STEP 2: UPDATE PC CONFIGURATION
+==================================
+
+File: pc_server/simple_app.py
+-----------------------------
+Line 37: Update the PI_API_URL with your Pi's actual IP address
+
+Current setting:
+PI_API_URL="http://10.203.228.43:5001/sprinkle"
+
+Change to your Pi's IP:
+PI_API_URL="http://YOUR_PI_IP:5001/sprinkle"
+
+Example:
+PI_API_URL="http://192.168.1.100:5001/sprinkle"
+
+🔧 STEP 3: UPDATE PI CONFIGURATION
+==================================
+
+File: pi_project/pi_slave_controller.py
+---------------------------------------
+The Pi slave controller doesn't need PC IP configuration since it only listens for commands.
+
+However, if you need to configure the Pi's listening address:
+
+Current setting (line ~200):
+app.run(host='0.0.0.0', port=5001, debug=False)
+
+This allows connections from any IP address on port 5001.
+
+🔧 STEP 4: TEST NETWORK CONNECTIVITY
+====================================
+
+From PC to Pi:
+--------------
+1. Open Command Prompt/PowerShell on PC
+2. Test ping: ping YOUR_PI_IP
+3. Test port connectivity: telnet YOUR_PI_IP 5001
+   (If telnet not available, use: Test-NetConnection -ComputerName YOUR_PI_IP -Port 5001)
+
+From Pi to PC:
+--------------
+1. Open terminal on Pi
+2. Test ping: ping YOUR_PC_IP
+3. Test port connectivity: telnet YOUR_PC_IP 5000
+
+🔧 STEP 5: FIREWALL CONFIGURATION
+==================================
+
+Windows PC Firewall:
+-------------------
+1. Open Windows Defender Firewall
+2. Click "Allow an app or feature through Windows Defender Firewall"
+3. Click "Change settings" and "Allow another app"
+4. Browse to your Python executable or add Python
+5. Ensure both Private and Public networks are checked
+6. Also allow port 5000 and 5001
+
+Raspberry Pi Firewall:
+----------------------
+1. If using ufw: sudo ufw allow 5001
+2. If using iptables: sudo iptables -A INPUT -p tcp --dport 5001 -j ACCEPT
+3. Save iptables: sudo iptables-save > /etc/iptables/rules.v4
+
+🔧 STEP 6: STATIC IP CONFIGURATION (RECOMMENDED)
+================================================
+
+Windows PC Static IP:
+---------------------
+1. Open Network & Internet settings
+2. Click "Change adapter options"
+3. Right-click your network adapter → Properties
+4. Select "Internet Protocol Version 4 (TCP/IPv4)" → Properties
+5. Select "Use the following IP address"
+6. Enter:
+   - IP address: 192.168.1.50 (or your preferred IP)
+   - Subnet mask: 255.255.255.0
+   - Default gateway: 192.168.1.1 (your router's IP)
+   - DNS: 8.8.8.8, 8.8.4.4
+
+Raspberry Pi Static IP:
+-----------------------
+1. Edit: sudo nano /etc/dhcpcd.conf
+2. Add at the end:
+   interface eth0  # or wlan0 for WiFi
+   static ip_address=192.168.1.100/24
+   static routers=192.168.1.1
+   static domain_name_servers=8.8.8.8 8.8.4.4
+3. Save and reboot: sudo reboot
+
+🔧 STEP 7: VERIFICATION STEPS
+==============================
+
+1. Start Pi Slave Controller:
+   cd pi_project
+   ./start_pi_slave.sh
+
+2. Start PC Master Controller:
+   cd pc_server
+   ./start_pc_master.sh
+
+3. Test Connection:
+   - Open web browser: http://localhost:5000
+   - Click "Test Pi Connection" button
+   - Should show "Pi connection successful"
+
+4. Check Logs:
+   - PC console should show: "Pi API URL: http://YOUR_PI_IP:5001/sprinkle"
+   - Pi console should show: "🌱 Pi Slave Controller ready on port 5001"
+
+🔧 STEP 8: TROUBLESHOOTING
+==========================
+
+Common Issues:
+--------------
+
+1. "Connection timeout" error:
+   - Check if Pi is running on port 5001
+   - Verify IP address is correct
+   - Check firewall settings
+   - Test ping between devices
+
+2. "Connection refused" error:
+   - Pi server not running
+   - Wrong port number
+   - Firewall blocking connection
+
+3. "Network unreachable" error:
+   - Devices not on same network
+   - Wrong subnet mask
+   - Router configuration issues
+
+Debugging Commands:
+-------------------
+PC:
+- ipconfig /all
+- ping YOUR_PI_IP
+- Test-NetConnection -ComputerName YOUR_PI_IP -Port 5001
+- netstat -an | findstr 5001
+
+Pi:
+- hostname -I
+- ping YOUR_PC_IP
+- netstat -tlnp | grep 5001
+- sudo systemctl status networking
+
+🔧 STEP 9: AUTOMATIC IP DETECTION (OPTIONAL)
+============================================
+
+For dynamic IP environments, you can modify the code to automatically detect IP addresses:
+
+PC (simple_app.py):
+-------------------
+Add this function to automatically find Pi IP:
+```python
+def find_pi_ip():
+    """Scan network for Pi device"""
+    import subprocess
+    import re
+    
+    # Scan common Pi IP ranges
+    for i in range(100, 110):
+        ip = f"192.168.1.{i}"
+        try:
+            result = subprocess.run(['ping', '-n', '1', ip], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                # Test if port 5001 is open
+                try:
+                    response = requests.get(f"http://{ip}:5001/health", timeout=2)
+                    if response.status_code == 200:
+                        return ip
+                except:
+                    continue
+        except:
+            continue
+    return None
+```
+
+Pi (pi_slave_controller.py):
+----------------------------
+Add broadcast capability:
+```python
+@app.route('/discover', methods=['GET'])
+def discover():
+    """Respond to network discovery"""
+    return jsonify({
+        "device": "raspberry_pi",
+        "service": "sprinkler_controller",
+        "ip": request.remote_addr,
+        "port": 5001
+    })
+```
+
+🔧 STEP 10: FINAL CONFIGURATION CHECKLIST
+=========================================
+
+□ PC IP address confirmed: _______________
+□ Pi IP address confirmed: _______________
+□ Both devices on same network: □ Yes □ No
+□ PC firewall allows port 5000: □ Yes □ No
+□ PC firewall allows port 5001: □ Yes □ No
+□ Pi firewall allows port 5001: □ Yes □ No
+□ Ping test successful: □ Yes □ No
+□ Port connectivity test successful: □ Yes □ No
+□ Pi slave controller running: □ Yes □ No
+□ PC master controller running: □ Yes □ No
+□ Web UI accessible: □ Yes □ No
+□ Pi connection test successful: □ Yes □ No
+
+================================================================================
+                              END OF GUIDE
+================================================================================

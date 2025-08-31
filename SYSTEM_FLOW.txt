@@ -1,0 +1,261 @@
+================================================================================
+                    PLANT DISEASE DETECTION SYSTEM - COMPLETE FLOW
+================================================================================
+
+🌱 SYSTEM OVERVIEW
+==================
+PC Master Controller (AI & Decision Maker) + Pi Slave Controller (Actuator Only)
+Complete workflow from image capture to sprinkler control
+
+📋 SETUP FLOW
+=============
+
+1. PC MASTER SETUP
+   ├── Navigate to pc_server directory
+   ├── Run: chmod +x start_pc_master.sh
+   ├── Run: ./start_pc_master.sh
+   ├── Script creates virtual environment
+   ├── Script installs dependencies
+   ├── Script starts Flask server on port 5000
+   └── Web UI available at http://localhost:5000
+
+2. PI SLAVE SETUP
+   ├── Navigate to pi_project directory
+   ├── Run: chmod +x start_pi_slave.sh
+   ├── Run: ./start_pi_slave.sh
+   ├── Script checks if running on Raspberry Pi
+   ├── Script creates virtual environment
+   ├── Script installs dependencies
+   ├── Script starts Flask API on port 5001
+   └── Pi API available at http://PI_IP:5001
+
+3. HARDWARE CONNECTION
+   ├── Connect camera to PC
+   ├── Connect sprinkler to Pi GPIO pin 17
+   ├── Ensure both devices on same network
+   └── Verify Pi IP address in PC configuration
+
+🔄 OPERATIONAL FLOW
+===================
+
+PHASE 1: SYSTEM INITIALIZATION
+------------------------------
+1. PC Master Controller starts
+   ├── Flask server initializes on port 5000
+   ├── Camera system ready but not active
+   ├── Gemini AI API configured
+   ├── Pi API URL configured: http://10.203.228.217:5001/sprinkle
+   └── Web UI loads at http://localhost:5000
+
+2. Pi Slave Controller starts
+   ├── Flask API server initializes on port 5001
+   ├── GPIO pin 17 configured for sprinkler control
+   ├── Sprinkler set to LOW (off) state
+   ├── Statistics counters initialized
+   └── Ready to receive commands from PC
+
+3. Connection Verification
+   ├── PC tests Pi connection via /api/test_pi_connection
+   ├── Pi responds with health status
+   ├── Connection status displayed in web UI
+   └── System ready for operation
+
+PHASE 2: USER INTERACTION
+-------------------------
+1. User opens web browser
+   ├── Navigate to http://localhost:5000
+   ├── Web UI displays system status
+   ├── Camera status: "Camera not started"
+   ├── Pi connection status: "Connected" or "Failed"
+   └── Control buttons available
+
+2. User starts camera
+   ├── Click "Start Camera" button
+   ├── PC sends POST to /api/start_camera
+   ├── OpenCV initializes camera (device 0)
+   ├── Camera properties set: 640x480, 15 FPS
+   ├── Camera status updates to "Running"
+   └── Camera ready for image capture
+
+PHASE 3: DISEASE DETECTION CYCLE
+--------------------------------
+1. User triggers detection
+   ├── Click "Capture, Detect & Control Pi" button
+   ├── Button disabled to prevent multiple requests
+   ├── Status updates to "Capturing image and detecting disease..."
+   └── PC sends POST to /api/capture_and_detect
+
+2. Image Capture (PC)
+   ├── OpenCV captures frame from camera
+   ├── Image saved as temporary file: capture_TIMESTAMP.jpg
+   ├── File saved in temp/ directory
+   └── Image ready for AI processing
+
+3. AI Disease Detection (PC)
+   ├── PC calls detect_disease() function
+   ├── Image sent to Google Gemini 2.0 Flash API
+   ├── AI analyzes plant leaf image
+   ├── Returns: disease type, severity percentage (0-100%)
+   └── Processing time: 2-5 seconds
+
+4. Decision Making (PC)
+   ├── PC evaluates severity against thresholds:
+   │   ├── 0-30%: Healthy → action="off", duration=0
+   │   ├── 30-70%: Low disease → action="on", duration=2000ms
+   │   └── 70-100%: High disease → action="on", duration=5000ms
+   ├── Decision logic determines sprinkler action
+   └── Command payload prepared for Pi
+
+5. Command Transmission (PC → Pi)
+   ├── PC sends HTTP POST to Pi API
+   ├── URL: http://10.203.228.217:5001/sprinkle
+   ├── Payload: {"action":"on","duration":5000}
+   ├── Timeout: 10 seconds
+   └── PC waits for Pi response
+
+PHASE 4: SPRINKLER CONTROL (Pi)
+-------------------------------
+1. Pi receives command
+   ├── Pi Flask API receives POST on /sprinkle endpoint
+   ├── JSON payload parsed: action and duration
+   ├── Command logged: "📡 Received command: action=on, duration=5000ms"
+   ├── Statistics updated: total_commands++
+   └── Pi prepares to control sprinkler
+
+2. GPIO Control (Pi)
+   ├── If action="on" and duration>0:
+   │   ├── GPIO pin 17 set to HIGH
+   │   ├── Sprinkler activates
+   │   ├── Pi waits for specified duration
+   │   ├── GPIO pin 17 set to LOW
+   │   ├── Sprinkler deactivates
+   │   ├── Statistics updated: total_sprays++, total_duration+=duration
+   │   └── Log: "✅ Sprinkler activated for 5000ms"
+   │
+   └── If action="off":
+       ├── GPIO pin 17 set to LOW
+       ├── Sprinkler remains off
+       └── Log: "🌱 Sprinkler kept off - Plant is healthy"
+
+3. Response Generation (Pi)
+   ├── Pi creates response JSON
+   ├── Status: "sprinkled" or "off"
+   ├── Duration: actual duration used
+   ├── Timestamp: current time
+   └── Message: descriptive text
+
+4. Response Transmission (Pi → PC)
+   ├── Pi sends HTTP response back to PC
+   ├── Status code: 200 (success)
+   ├── Response body: JSON with status and details
+   └── Pi continues listening for next command
+
+PHASE 5: RESULT PROCESSING (PC)
+-------------------------------
+1. PC receives Pi response
+   ├── PC receives HTTP response from Pi
+   ├── Response parsed and validated
+   ├── Connection status updated
+   └── Pi response stored for display
+
+2. Result Storage (PC)
+   ├── Detection result stored in memory
+   ├── Action result stored in memory
+   ├── Recent detections list updated
+   ├── Recent actions list updated
+   └── Lists limited to last 50 entries
+
+3. UI Update (PC)
+   ├── Web UI refreshed with new data
+   ├── Detection results table updated
+   ├── Action history table updated
+   ├── Last result displayed prominently
+   └── Status updated to "Detection complete"
+
+4. Temporary File Cleanup (PC)
+   ├── Temporary image file deleted
+   ├── Disk space maintained
+   └── System ready for next cycle
+
+PHASE 6: MONITORING & LOGGING
+-----------------------------
+1. PC Logging
+   ├── Console output: "🌱 Complete Cycle: Diseased (High) - Disease: blight - Severity: 85.0% - Action: on - Duration: 5000ms"
+   ├── Pi response logged: "📡 Pi Response: {'status': 'sprinkled', 'duration': 5000}"
+   ├── Error handling for failed operations
+   └── System statistics maintained
+
+2. Pi Logging
+   ├── File logging: pi_slave.log
+   ├── Console output for real-time monitoring
+   ├── GPIO operation logs
+   ├── API request/response logs
+   └── Statistics tracking
+
+3. Web UI Monitoring
+   ├── Real-time status updates
+   ├── Detection history display
+   ├── Action history display
+   ├── Pi connection status
+   └── System health indicators
+
+🔄 CONTINUOUS OPERATION
+=======================
+
+1. Auto-Refresh
+   ├── Web UI refreshes every 30 seconds
+   ├── Tables updated with latest data
+   ├── Connection status monitored
+   └── System remains responsive
+
+2. Error Handling
+   ├── Camera errors: Fallback to error message
+   ├── Pi connection errors: Retry mechanism
+   ├── AI API errors: Mock detection fallback
+   ├── GPIO errors: Emergency stop procedures
+   └── Network errors: Connection retry
+
+3. System Maintenance
+   ├── Memory management: Old results purged
+   ├── File cleanup: Temporary files removed
+   ├── Log rotation: Old logs archived
+   └── Performance monitoring: Response times tracked
+
+🛑 SHUTDOWN FLOW
+================
+
+1. PC Master Shutdown
+   ├── User stops Flask server (Ctrl+C)
+   ├── Camera resources released
+   ├── Temporary files cleaned up
+   ├── Memory cleared
+   └── System shutdown complete
+
+2. Pi Slave Shutdown
+   ├── User stops Flask server (Ctrl+C)
+   ├── GPIO pin 17 set to LOW
+   ├── GPIO cleanup performed
+   ├── Logs finalized
+   └── System shutdown complete
+
+📊 DATA FLOW SUMMARY
+====================
+
+INPUT → PROCESSING → DECISION → ACTION → FEEDBACK
+
+1. INPUT: Camera image capture (PC)
+2. PROCESSING: AI disease detection (PC)
+3. DECISION: Severity evaluation and action determination (PC)
+4. ACTION: Sprinkler control via GPIO (Pi)
+5. FEEDBACK: Response and result display (PC)
+
+🌱 COMPLETE CYCLE TIME: ~3-7 seconds
+- Image capture: 0.1 seconds
+- AI processing: 2-5 seconds
+- Pi communication: 0.1-1 second
+- Sprinkler action: 0-5 seconds (based on duration)
+- UI update: 0.1 seconds
+
+================================================================================
+                              END OF FLOW
+================================================================================

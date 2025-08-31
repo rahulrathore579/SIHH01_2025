@@ -1,0 +1,20 @@
+# Core Flask dependencies
+Flask==2.3.3
+Flask-CORS==4.0.0
+Werkzeug==2.3.7
+
+# Image processing and computer vision
+opencv-python==4.8.1.78
+Pillow==10.0.1
+numpy==1.26.4
+
+# AI/ML APIs
+requests==2.31.0
+google-generativeai==0.3.2  # For Gemini API
+
+# Utilities
+python-dotenv==1.0.0
+
+# Development and testing
+pytest==7.4.2
+pytest-flask==1.2.0 

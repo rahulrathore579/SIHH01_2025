@@ -1,0 +1,220 @@
+================================================================================
+                    NETWORK TROUBLESHOOTING GUIDE
+================================================================================
+
+🌐 PI CONNECTION ISSUE RESOLUTION
+=================================
+
+ERROR: "Pi connection failed: HTTPConnectionPool(host='192.168.1.100', port=5001): 
+Max retries exceeded with url: /health (Caused by ConnectTimeoutError)"
+
+🔍 STEP-BY-STEP TROUBLESHOOTING
+===============================
+
+STEP 1: VERIFY PI IP ADDRESS
+----------------------------
+
+1. On your Raspberry Pi, run these commands:
+   ```bash
+   hostname -I
+   ```
+   This will show all IP addresses assigned to your Pi.
+
+2. Look for an IP address like:
+   - 192.168.1.xxx
+   - 192.168.0.xxx
+   - 10.0.0.xxx
+   - 172.16.xxx.xxx
+
+STEP 2: UPDATE PC CONFIGURATION
+-------------------------------
+
+1. Open pc_server/simple_app.py
+2. Find line 36 (Pi Configuration section)
+3. Update the IP address:
+   ```python
+   PI_API_URL="http://YOUR_ACTUAL_PI_IP:5001/sprinkle"
+   ```
+4. Replace YOUR_ACTUAL_PI_IP with the IP from Step 1
+
+STEP 3: VERIFY PI IS RUNNING
+----------------------------
+
+1. On your Pi, check if the slave controller is running:
+   ```bash
+   cd pi_project
+   python pi_slave_controller.py
+   ```
+
+2. You should see:
+   ```
+   🌱 Raspberry Pi Slave Controller Starting...
+   💧 Sprinkler GPIO Pin: 17
+   📡 Listening for commands from PC Master Controller
+   🚀 Pi Slave Controller ready!
+   ```
+
+STEP 4: TEST NETWORK CONNECTIVITY
+--------------------------------
+
+1. From your PC, test basic connectivity:
+   ```bash
+   ping YOUR_PI_IP
+   ```
+
+2. Test if port 5001 is accessible:
+   ```bash
+   telnet YOUR_PI_IP 5001
+   ```
+   (If telnet is not available, use: nc -zv YOUR_PI_IP 5001)
+
+STEP 5: TEST PI API DIRECTLY
+----------------------------
+
+1. From your PC, test the Pi API:
+   ```bash
+   curl http://YOUR_PI_IP:5001/health
+   ```
+
+2. You should get a JSON response like:
+   ```json
+   {
+     "status": "healthy",
+     "timestamp": "2024-01-01T12:00:00",
+     "gpio_pin": 17,
+     "sprinkler_state": "LOW"
+   }
+   ```
+
+🔧 COMMON SOLUTIONS
+===================
+
+SOLUTION 1: FIREWALL ISSUES
+---------------------------
+
+1. On Pi, check if port 5001 is blocked:
+   ```bash
+   sudo ufw status
+   ```
+
+2. If firewall is active, allow port 5001:
+   ```bash
+   sudo ufw allow 5001
+   ```
+
+SOLUTION 2: DIFFERENT NETWORK SEGMENTS
+--------------------------------------
+
+1. Check if PC and Pi are on the same network:
+   - PC IP: 192.168.1.xxx
+   - Pi IP: 192.168.1.xxx (should be same subnet)
+
+2. If different subnets, either:
+   - Connect both to same router, or
+   - Use Pi's actual IP address
+
+SOLUTION 3: PI NOT RUNNING
+--------------------------
+
+1. Start Pi slave controller:
+   ```bash
+   cd pi_project
+   ./start_pi_slave.sh
+   ```
+
+2. Check for errors in startup
+
+SOLUTION 4: WRONG IP ADDRESS
+----------------------------
+
+1. Pi might have a different IP than expected
+2. Use `hostname -I` on Pi to get correct IP
+3. Update PC configuration with correct IP
+
+SOLUTION 5: PORT CONFLICT
+-------------------------
+
+1. Check if port 5001 is already in use:
+   ```bash
+   sudo netstat -tlnp | grep 5001
+   ```
+
+2. If port is used, either:
+   - Stop the conflicting service, or
+   - Change Pi port in pi_slave_controller.py
+
+🔍 DIAGNOSTIC COMMANDS
+======================
+
+ON PC:
+------
+```bash
+# Test basic connectivity
+ping YOUR_PI_IP
+
+# Test port connectivity
+telnet YOUR_PI_IP 5001
+
+# Test API directly
+curl http://YOUR_PI_IP:5001/health
+
+# Check network route
+tracert YOUR_PI_IP
+```
+
+ON PI:
+------
+```bash
+# Get IP address
+hostname -I
+
+# Check if service is running
+ps aux | grep python
+
+# Check port status
+sudo netstat -tlnp | grep 5001
+
+# Check firewall
+sudo ufw status
+
+# Test local API
+curl http://localhost:5001/health
+```
+
+📋 CHECKLIST
+============
+
+□ Pi IP address identified correctly
+□ PC configuration updated with correct IP
+□ Pi slave controller is running
+□ Port 5001 is accessible
+□ Firewall allows port 5001
+□ Both devices on same network
+□ Pi API responds to direct curl test
+□ PC can ping Pi IP address
+
+🚀 QUICK FIXES
+==============
+
+1. **Restart Pi slave controller:**
+   ```bash
+   cd pi_project
+   python pi_slave_controller.py
+   ```
+
+2. **Restart PC master controller:**
+   ```bash
+   cd pc_server
+   python simple_app.py
+   ```
+
+3. **Use localhost for testing (if Pi and PC are same machine):**
+   ```python
+   PI_API_URL="http://localhost:5001/sprinkle"
+   ```
+
+4. **Check router settings for device isolation**
+
+================================================================================
+                              END OF GUIDE
+================================================================================
